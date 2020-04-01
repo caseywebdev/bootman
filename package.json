@@ -1,0 +1,12 @@
+{
+  "name": "bootman",
+  "type": "module",
+  "version": "0.1.0",
+  "author": "Casey Foster <c@sey.me>",
+  "license": "MIT",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caseywebdev/bootman"
+  }
+}
