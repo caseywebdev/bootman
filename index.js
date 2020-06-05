@@ -11,7 +11,6 @@ export default services => {
   const starting = new Set();
   const stopped = new Set(Object.keys(services));
   const stopping = new Set();
-  const targets = {};
   const waits = {};
 
   const wait = (event, name) => {
@@ -33,26 +32,29 @@ export default services => {
   const start = async name => {
     if (!name) return start([...stopping, ...stopped]);
 
-    if (name instanceof Set) return start([...name]);
+    if (name instanceof Set) name = [...name];
 
     if (Array.isArray(name)) return Promise.all(name.map(start));
 
-    targets[name] = 'start';
+    const service = services[name];
+    if (!service) throw new Error(`Unknown service '${name}'`);
 
     if (started.has(name)) return;
 
     if (starting.has(name)) return wait('start', name);
 
-    if (stopping.has(name)) await wait('stop', name);
+    if (stopping.has(name)) {
+      await wait('stop', name);
+      return start(name);
+    }
 
-    if (targets[name] !== 'start') return;
-
-    const service = services[name];
-    if (!service) throw new Error(`Unknown service '${name}'`);
-
-    if (service.dependsOn) await start(service.dependsOn);
-
-    if (targets[name] !== 'start') return;
+    if (
+      service.dependsOn &&
+      ![...service.dependsOn].every(name => started.has(name))
+    ) {
+      await start(service.dependsOn);
+      return start(name);
+    }
 
     stopped.delete(name);
     starting.add(name);
@@ -65,22 +67,21 @@ export default services => {
   const stop = async name => {
     if (!name) return stop([...starting, ...started]);
 
-    if (name instanceof Set) return stop([...name]);
+    if (name instanceof Set) name = [...name];
 
     if (Array.isArray(name)) return Promise.all(name.map(stop));
 
-    targets[name] = 'stop';
+    const service = services[name];
+    if (!service) throw new Error(`Unknown service '${name}'`);
 
     if (stopped.has(name)) return;
 
     if (stopping.has(name)) return wait('stop', name);
 
-    if (starting.has(name)) await wait('start', name);
-
-    if (targets[name] !== 'stop') return;
-
-    const service = services[name];
-    if (!service) throw new Error(`Unknown service '${name}'`);
+    if (starting.has(name)) {
+      await wait('start', name);
+      return stop(name);
+    }
 
     const dependents = Object.entries(services).reduce(
       (dependents, [otherName, service]) => {
@@ -91,9 +92,11 @@ export default services => {
       },
       new Set()
     );
-    if (dependents.size) await stop(dependents);
 
-    if (targets[name] !== 'stop') return;
+    if (dependents.size && ![...dependents].every(name => stopped.has(name))) {
+      await stop(dependents);
+      return stop(name);
+    }
 
     started.delete(name);
     stopping.add(name);
