@@ -12,6 +12,9 @@ export default services => {
   const stopped = new Set(Object.keys(services));
   const stopping = new Set();
   const waits = {};
+  const intents = Object.fromEntries(
+    Object.entries(services).map(([name]) => [name, 'stop'])
+  );
 
   const wait = (event, name) => {
     const deferred = createDeferred();
@@ -30,7 +33,7 @@ export default services => {
   };
 
   const start = async name => {
-    if (!name) return start([...stopping, ...stopped]);
+    if (!name) return start(Object.keys(services));
 
     if (name instanceof Set) name = [...name];
 
@@ -39,13 +42,15 @@ export default services => {
     const service = services[name];
     if (!service) throw new Error(`Unknown service '${name}'`);
 
+    intents[name] = 'start';
+
     if (started.has(name)) return;
 
     if (starting.has(name)) return wait('start', name);
 
     if (stopping.has(name)) {
       await wait('stop', name);
-      return start(name);
+      return intents[name] === 'start' && start(name);
     }
 
     if (
@@ -53,7 +58,7 @@ export default services => {
       ![...service.dependsOn].every(name => started.has(name))
     ) {
       await start(service.dependsOn);
-      return start(name);
+      return intents[name] === 'start' && start(name);
     }
 
     stopped.delete(name);
@@ -65,7 +70,7 @@ export default services => {
   };
 
   const stop = async name => {
-    if (!name) return stop([...starting, ...started]);
+    if (!name) return stop(Object.keys(services));
 
     if (name instanceof Set) name = [...name];
 
@@ -74,13 +79,15 @@ export default services => {
     const service = services[name];
     if (!service) throw new Error(`Unknown service '${name}'`);
 
+    intents[name] = 'stop';
+
     if (stopped.has(name)) return;
 
     if (stopping.has(name)) return wait('stop', name);
 
     if (starting.has(name)) {
       await wait('start', name);
-      return stop(name);
+      return intents[name] === 'stop' && stop(name);
     }
 
     const dependents = Object.entries(services).reduce(
@@ -95,7 +102,7 @@ export default services => {
 
     if (dependents.size && ![...dependents].every(name => stopped.has(name))) {
       await stop(dependents);
-      return stop(name);
+      return intents[name] === 'stop' && stop(name);
     }
 
     started.delete(name);
