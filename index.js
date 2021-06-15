@@ -7,13 +7,12 @@ const createDeferred = () => {
 };
 
 export default services => {
-  const started = new Set();
-  const starting = new Set();
-  const stopped = new Set(Object.keys(services));
-  const stopping = new Set();
+  const states = Object.fromEntries(
+    Object.keys(services).map(name => [name, 'stopped'])
+  );
   const waits = {};
   const intents = Object.fromEntries(
-    Object.entries(services).map(([name]) => [name, 'stop'])
+    Object.keys(services).map(name => [name, 'stop'])
   );
 
   const wait = (event, name) => {
@@ -44,28 +43,31 @@ export default services => {
 
     intents[name] = 'start';
 
-    if (started.has(name)) return;
+    if (states[name] === 'started') return;
 
-    if (starting.has(name)) return wait('start', name);
+    if (states[name] === 'starting') return wait('start', name);
 
-    if (stopping.has(name)) {
+    if (states[name] === 'stopping') {
       await wait('stop', name);
       return intents[name] === 'start' && start(name);
     }
 
     if (
       service.dependsOn &&
-      ![...service.dependsOn].every(name => started.has(name))
+      ![...service.dependsOn].every(name => states[name] === 'started')
     ) {
       await start(service.dependsOn);
       return intents[name] === 'start' && start(name);
     }
 
-    stopped.delete(name);
-    starting.add(name);
-    if (service.start) await service.start();
-    starting.delete(name);
-    started.add(name);
+    states[name] = 'starting';
+    try {
+      await service.start?.();
+    } catch (er) {
+      states[name] = 'stopped';
+      throw er;
+    }
+    states[name] = 'started';
     emit('start', name);
   };
 
@@ -81,11 +83,11 @@ export default services => {
 
     intents[name] = 'stop';
 
-    if (stopped.has(name)) return;
+    if (states[name] === 'stopped') return;
 
-    if (stopping.has(name)) return wait('stop', name);
+    if (states[name] === 'stopping') return wait('stop', name);
 
-    if (starting.has(name)) {
+    if (states[name] === 'starting') {
       await wait('start', name);
       return intents[name] === 'stop' && stop(name);
     }
@@ -100,16 +102,22 @@ export default services => {
       new Set()
     );
 
-    if (dependents.size && ![...dependents].every(name => stopped.has(name))) {
+    if (
+      dependents.size &&
+      ![...dependents].every(name => states[name] === 'stopped')
+    ) {
       await stop(dependents);
       return intents[name] === 'stop' && stop(name);
     }
 
-    started.delete(name);
-    stopping.add(name);
-    if (service.stop) await service.stop();
-    stopping.delete(name);
-    stopped.add(name);
+    states[name] = 'stopping';
+    try {
+      await service.stop?.();
+    } catch (er) {
+      states[name] = 'started';
+      throw er;
+    }
+    states[name] = 'stopped';
     emit('stop', name);
   };
 
