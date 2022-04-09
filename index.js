@@ -94,7 +94,7 @@ export default services => {
 
     const dependents = Object.entries(services).reduce(
       (dependents, [otherName, service]) => {
-        if (service.dependsOn && service.dependsOn.has(name)) {
+        if (service.dependsOn && [...service.dependsOn].includes(name)) {
           dependents.add(otherName);
         }
         return dependents;
