@@ -52,7 +52,7 @@ export default services => {
       return intents[name] === 'start' && start(name);
     }
 
-    if (services.dependsOn?.some(name => states[name] !== 'started')) {
+    if (service.dependsOn?.some(name => states[name] !== 'started')) {
       await start(service.dependsOn);
       return intents[name] === 'start' && start(name);
     }
