@@ -1,3 +1,5 @@
+const { Promise } = globalThis;
+
 const createDeferred = () => {
   const deferred = {};
   deferred.promise = new Promise((resolve, reject) =>
@@ -34,8 +36,6 @@ export default services => {
   const start = async name => {
     if (!name) return start(Object.keys(services));
 
-    if (name instanceof Set) name = [...name];
-
     if (Array.isArray(name)) return Promise.all(name.map(start));
 
     const service = services[name];
@@ -52,10 +52,7 @@ export default services => {
       return intents[name] === 'start' && start(name);
     }
 
-    if (
-      service.dependsOn &&
-      ![...service.dependsOn].every(name => states[name] === 'started')
-    ) {
+    if (services.dependsOn?.some(name => states[name] !== 'started')) {
       await start(service.dependsOn);
       return intents[name] === 'start' && start(name);
     }
@@ -73,8 +70,6 @@ export default services => {
 
   const stop = async name => {
     if (!name) return stop(Object.keys(services));
-
-    if (name instanceof Set) name = [...name];
 
     if (Array.isArray(name)) return Promise.all(name.map(stop));
 
@@ -94,18 +89,13 @@ export default services => {
 
     const dependents = Object.entries(services).reduce(
       (dependents, [otherName, service]) => {
-        if (service.dependsOn && service.dependsOn.has(name)) {
-          dependents.add(otherName);
-        }
+        if (service.dependsOn?.includes(name)) dependents.push(otherName);
         return dependents;
       },
-      new Set()
+      []
     );
 
-    if (
-      dependents.size &&
-      ![...dependents].every(name => states[name] === 'stopped')
-    ) {
+    if (dependents.some(name => states[name] !== 'stopped')) {
       await stop(dependents);
       return intents[name] === 'stop' && stop(name);
     }
