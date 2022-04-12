@@ -42,9 +42,8 @@ export default services.start(['d']);
   all three of those services must be in a "started" state before service d 
   will be started.
 
-  The .start and .stop functions accepts either an individual name, i.e. 'd',
-  an array of names, i.e. ['d', 'c', 'b', 'a'],
-  or a set of names, i.e. new Set(['d', 'c', 'b', 'a']).
+  The .start and .stop functions accepts either an individual name, i.e. 'd'
+  or an array of names, i.e. ['d', 'c', 'b', 'a'].
 */
 ```
 
