@@ -50,7 +50,7 @@ export const createServiceController = services => {
     for (const deferred of deferreds) deferred.resolve();
   };
 
-  /** @param {U | U[] | undefined} name */
+  /** @param {U | U[]} [name] */
   const start = async name => {
     if (!name) {
       await start(/** @type {U[]} */ (Object.keys(services)));
@@ -98,7 +98,7 @@ export const createServiceController = services => {
     emit('start', name);
   };
 
-  /** @param {U | U[] | undefined} name */
+  /** @param {U | U[]} [name] */
   const stop = async name => {
     if (!name) {
       await stop(/** @type {U[]} */ (Object.keys(services)));
