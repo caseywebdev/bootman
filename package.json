@@ -1,12 +1,22 @@
 {
   "name": "bootman",
   "type": "module",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "author": "Casey Foster <c@sey.me>",
   "license": "MIT",
-  "main": "index.js",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/caseywebdev/bootman"
+  },
+  "devDependencies": {
+    "eslint-config-coderiety": "2",
+    "eslint": "9",
+    "typescript": "5"
   }
 }

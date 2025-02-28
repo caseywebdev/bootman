@@ -1,0 +1,18 @@
+#!/bin/sh -e
+
+node_modules/.bin/tsc \
+  --allowJs \
+  --checkJs \
+  --declaration \
+  --emitDeclarationOnly \
+  --module NodeNext \
+  --moduleResolution NodeNext \
+  --outDir . \
+  --rootDir . \
+  --strict \
+  --target ESNext \
+  index.js
+
+node_modules/.bin/eslint --fix
+
+node_modules/.bin/tsc
